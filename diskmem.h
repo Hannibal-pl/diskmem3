@@ -20,6 +20,7 @@ PERFORMANCE OF THIS SOFTWARE.
 #include <stdbool.h>
 
 #define VERSION			"0.2.1"
+#define DEFAULT_BAUDRATE	38400
 #define DEFAULT_DESTMEM		0x131C
 #define DEFAULT_DEVICE		"/dev/ttyUSB0"
 #define DEFAULT_JUMPPOINT	0x60B68E4
@@ -34,5 +35,10 @@ extern char *exploit;
 extern unsigned exlen;
 extern unsigned jumppoint;
 extern FILE *logfile;
+extern int sfd;
 
+extern bool initserial(int fd, int baudrate);
+extern int openserial(void);
 extern void parseparams(int argc, char *argv[]);
+extern int selectbaud(int baudrate);
+extern bool setspeed(int fd, int baudrate, int *realset);

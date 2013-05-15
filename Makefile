@@ -1,8 +1,9 @@
+#CC=clang
 CC=gcc
 CFLAGS=-Wall -g -std=gnu99
 INCLUDES=-I/usr/include
 LIBS=-lm
-MOD=cmdline.o diskmem3.o
+MOD=cmdline.o diskmem3.o serial.o
 
 all: diskmem3
 
