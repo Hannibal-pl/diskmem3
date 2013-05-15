@@ -15,15 +15,19 @@ PERFORMANCE OF THIS SOFTWARE.
 */
 
 #include <string.h>
+#include <stdarg.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <termios.h>
 #include <errno.h>
 #include <sys/stat.h>
+#include <poll.h>
+#include <time.h>
 
 #include "diskmem.h"
 
 int sfd = -1;
+char lastcommand[MAX_COMMAND_LEN];
 
 struct SSPEED {
 	unsigned baudrate;
@@ -80,11 +84,11 @@ int selectbaud(int baudrate) {
 	return i - 1;
 }
 
-bool initserial(int fd, int baudrate) {
+bool initserial(int baudrate) {
 	struct termios opts;
 	int baudi;
 
-	if (tcgetattr(fd, &opts) < 0) {
+	if (tcgetattr(sfd, &opts) < 0) {
 		return false;
 	}
 
@@ -108,7 +112,7 @@ bool initserial(int fd, int baudrate) {
 	opts.c_cc[VMIN] = 1;
 	opts.c_cc[VTIME] = 0;
 
-	if (tcsetattr(fd, TCSANOW, &opts) < 0) {
+	if (tcsetattr(sfd, TCSANOW, &opts) < 0) {
 		return false;
 	}
 
@@ -140,7 +144,7 @@ int openserial(void) {
 
 	fcntl(sfd, F_SETFL, FNDELAY);
 
-	if (!initserial(sfd, baudrate)) {
+	if (!initserial(baudrate)) {
 		err = errno;
 		printf("Failed to initialize serial port.\n");
 		return errno;
@@ -149,12 +153,17 @@ int openserial(void) {
 	return 0;
 }
 
-bool setspeed(int fd, int baudrate, int *realset) {
+void closeserial(void) {
+	if (sfd != -1) {
+		close(sfd);
+	}
+}
+
+bool setspeed(int baudrate, int *realset) {
 	struct termios opts;
 	int baudi;
-	int len;
 
-	if (tcgetattr(fd, &opts) < 0) {
+	if (tcgetattr(sfd, &opts) < 0) {
 		return false;
 	}
 
@@ -163,20 +172,13 @@ bool setspeed(int fd, int baudrate, int *realset) {
 		return false;
 	}
 
-	len = strlen(sspeed[baudi].command);
-
-	if (write(fd, sspeed[baudi].command, len) != len) {
-		return false;
-	}
-	if (write(fd, "\n", 1) != 1) {
-		return false;
-	}
+	sendcommand("%s\n", sspeed[baudi].command);
 
 	cfsetospeed(&opts, sspeed[baudi].mask);
 	cfsetispeed(&opts, sspeed[baudi].mask);
 	sleep(1);
 
-	if (tcsetattr(fd, TCSAFLUSH, &opts) < 0) {
+	if (tcsetattr(sfd, TCSAFLUSH, &opts) < 0) {
 		return false;
 	}
 
@@ -187,3 +189,81 @@ bool setspeed(int fd, int baudrate, int *realset) {
 	return true;
 }
 
+bool sendcommand(char *format, ...) {
+	char command[MAX_COMMAND_LEN];
+	unsigned len;
+	struct pollfd lpfd[1];
+
+	va_list ap;
+	va_start(ap, format);
+	len = vsnprintf(command, MAX_COMMAND_LEN, format, ap);
+	va_end(ap);
+
+	if (len >= MAX_COMMAND_LEN) {
+		return false;
+	}
+
+	lpfd[0].fd = sfd;
+	lpfd[0].events = POLLOUT;
+	poll(lpfd, 1, -1);
+
+	if (write(sfd, command, len) != len) {
+		return false;
+	}
+
+	strcpy(lastcommand, command);
+	return true;
+}
+
+bool sendbyte(char byte) {
+	struct pollfd lpfd[1];
+
+	lpfd[0].fd = sfd;
+	lpfd[0].events = POLLOUT;
+	poll(lpfd, 1, -1);
+
+	if (write(sfd, &byte, 1) != 1) {
+		return false;
+	}
+
+	return true;
+}
+
+void uflood(unsigned sec) {
+	struct pollfd lpfd[1];
+	time_t tm;
+	char buf[1025];
+	int len;
+
+	if (sec < 1) {
+		printf("Warning: Period to short - reset to 1s.\n");
+		sec = 1;
+	} else if (sec > 60) {
+		printf("Warning: Period to long - reset to 60s.\n");
+		sec = 60;
+	}
+
+	lpfd[0].fd = sfd;
+	lpfd[0].events = POLLOUT | POLLIN;
+	tm = time(NULL) + sec;
+
+	printf("%is long \"U\" flood start.\n", sec);
+	while(time(NULL) < tm) {
+		poll(lpfd, 1, sec * 1000);
+		if (lpfd[0].revents == POLLIN) {
+			len = read(sfd, buf, sizeof(buf) - 1);
+			if (len > 0) {
+				buf[len] = '\0';
+				if (strstr(buf, "Encountered abort") || strstr(buf, "Flash code disabled")) {
+					printf("\"U\" flood stopped - target achieved.\n");
+					printf("%s", buf);
+					return;
+				}
+			}
+		}
+		if (lpfd[0].revents == POLLOUT) {
+			sendcommand("UUUUUUUUUUUUUUUU");
+		}
+	}
+	printf("\"U\" flood end - no effect.\n");
+}

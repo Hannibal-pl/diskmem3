@@ -25,6 +25,7 @@ PERFORMANCE OF THIS SOFTWARE.
 #define DEFAULT_DEVICE		"/dev/ttyUSB0"
 #define DEFAULT_JUMPPOINT	0x60B68E4
 /*#define DEFAULT_JUMPPOINT	0x60B70C4*/
+#define MAX_COMMAND_LEN		512
 
 extern int baudrate;
 extern bool consoleoutput;
@@ -37,8 +38,12 @@ extern unsigned jumppoint;
 extern FILE *logfile;
 extern int sfd;
 
-extern bool initserial(int fd, int baudrate);
+extern void closeserial(void);
+extern bool initserial(int baudrate);
 extern int openserial(void);
 extern void parseparams(int argc, char *argv[]);
 extern int selectbaud(int baudrate);
-extern bool setspeed(int fd, int baudrate, int *realset);
+extern bool sendbyte(char byte);
+extern bool sendcommand(char *format, ...);
+extern bool setspeed(int baudrate, int *realset);
+extern void uflood(unsigned sec);

@@ -91,63 +91,28 @@ FILE * openfile(unsigned from, unsigned to, char type) {
 }
 
 bool peekcommand(int fd, unsigned addr, char type) {
-	char buf[32];
-	unsigned len;
-	struct pollfd lpfd[1];
-
-	lpfd[0].fd = fd;
-	lpfd[0].events = POLLOUT;
-
 	switch (type) {
 		case 'b':
 		case 'w':
-			snprintf(buf, sizeof(buf), "%c%04x,%04x\n", type == 'b' ? '+' : '-', addr / 0x10000, addr % 0x10000);
-			break;
+			return sendcommand("%c%04x,%04x\n", type == 'b' ? '+' : '-', addr / 0x10000, addr % 0x10000);
 		case 'd':
-			snprintf(buf, sizeof(buf), "+%08x,,,4\n", addr);
-			break;
+			return sendcommand("+%08x,,,4\n", addr);
 		default:
 			return false;
 	}
-
-	poll(lpfd, 1, -1);
-	len = strlen(buf);
-	if (write(fd, buf, len) != len) {
-		return false;
-	}
-
-	return true;
 }
 
 bool pokecommand(int fd, unsigned addr, unsigned val, char type) {
-	char buf[32];
-	unsigned len;
-	struct pollfd lpfd[1];
-
-	lpfd[0].fd = fd;
-	lpfd[0].events = POLLOUT;
-
 	switch (type) {
 		case 'b':
-			snprintf(buf, sizeof(buf), "=%04x,%04x,%02x,1\n", addr / 0x10000, addr % 0x10000, val & 0xFF);
-			break;
+			return sendcommand("=%04x,%04x,%02x,1\n", addr / 0x10000, addr % 0x10000, val & 0xFF);
 		case 'w':
-			snprintf(buf, sizeof(buf), "=%04x,%04x,%04x,2\n", addr / 0x10000, addr % 0x10000, val & 0xFFFF);
-			break;
+			return sendcommand("=%04x,%04x,%04x,2\n", addr / 0x10000, addr % 0x10000, val & 0xFFFF);
 		case 'd':
-			snprintf(buf, sizeof(buf), "=%04x,%04x,%08x,4\n", addr / 0x10000, addr % 0x10000, val);
-			break;
+			return sendcommand("=%04x,%04x,%08x,4\n", addr / 0x10000, addr % 0x10000, val);
 		default:
 			return false;
 	}
-
-	poll(lpfd, 1, -1);
-	len = strlen(buf);
-	if (write(fd, buf, len) != len) {
-		return false;
-	}
-
-	return true;
 }
 
 int newtransfer(unsigned from, unsigned to, char type) {
@@ -206,10 +171,7 @@ int newtransfer(unsigned from, unsigned to, char type) {
 }
 
 void installexploit(void) {
-	char buf[32];
-
-	snprintf(buf, sizeof(buf), "=%04X,%04X,%08X,4\n", jumppoint / 0x10000, jumppoint % 0x10000, destmem + 1);
-	write(sfd, buf, strlen(buf));
+	sendcommand("=%04X,%04X,%08X,4\n", jumppoint / 0x10000, jumppoint % 0x10000, destmem + 1);
 }
 
 int writeexploit() {
@@ -300,36 +262,6 @@ int getparams(char *buf, unsigned *params, int max) {
 	return i + 1;
 }
 
-void uflood(void) {
-	struct pollfd lpfd[1];
-	time_t tm = time(NULL) + 10;
-	char buf[1025];
-	int len;
-
-	lpfd[0].fd = sfd;
-	lpfd[0].events = POLLOUT | POLLIN;
-
-	printf("\"U\" flood start.\n");
-	while(time(NULL) < tm) {
-		poll(lpfd, 1, -1);
-		if (lpfd[0].revents == POLLIN) {
-			len = read(sfd, buf, sizeof(buf) - 1);
-			if (len > 0) {
-				buf[len] = '\0';
-				if (strstr(buf, "Encountered abort") || strstr(buf, "Flash code disabled")) {
-					printf("\"U\" flood stopped - target achieved.\n");
-					printf("%s", buf);
-					return;
-				}
-			}
-		}
-		if (lpfd[0].revents == POLLOUT) {
-			write(sfd, "UUUUUUUUUUUUUUUU", 16);
-		}
-	}
-	printf("\"U\" flood end - no effect.\n");
-}
-
 void stdinprocess(void) {
 	int speed;
 	int realspeed;
@@ -345,10 +277,10 @@ void stdinprocess(void) {
 	if (interactive) {
 		for (i = 0; i < count; i++) {
 			if (stdinbuf[i] != '`') {
-				write(sfd, &stdinbuf[i], 1);
+				sendbyte(stdinbuf[i]);
 			} else {
 				interactive = false;
-				write(sfd, "/T\n", 3);
+				sendcommand("/T\n");
 				printf("Disabling interactive mode - hit I [Enter] to enable it again.\n");
 				break;
 			}
@@ -409,7 +341,7 @@ void stdinprocess(void) {
 					printf("Transfer in progress, cannot enter interactive mode now.\n");
 				} else {
 					printf("Enabling interactive mode - hit \"`\" (backtick) to exit.");
-					write(sfd, "\x1A", 1);
+					sendbyte('\x1A');
 					consoleoutput = true;
 					interactive = true;
 				}
@@ -418,7 +350,7 @@ void stdinprocess(void) {
 				if (transfer.active) {
 					printf("Command not available during transfer.\n");
 				} else {
-					write(sfd, "\x0C", 1);
+					sendbyte('\x0C');
 				}
 				break;
 			case 'o':
@@ -449,7 +381,7 @@ void stdinprocess(void) {
 					printf("Transfer in progress, baudrate change not available.\n");
 				} else {
 					speed = strtoul(&stdinbuf[i + 1], NULL, 0);
-					if (setspeed(sfd, speed, &realspeed)) {
+					if (setspeed(speed, &realspeed)) {
 						printf("Change baudrate to %i (requested %i).\n", realspeed, speed);
 					} else {
 						printf("Failed to change baudrate to %i.\n", speed);
@@ -460,7 +392,7 @@ void stdinprocess(void) {
 				infotransfer();
 				break;
 			case 'u':
-				uflood();
+				uflood(10);
 				break;
 			case 'x':
 				if (transfer.active) {
@@ -474,7 +406,7 @@ void stdinprocess(void) {
 				if (transfer.active) {
 					printf("Command not available during transfer.\n");
 				} else {
-					write(sfd, "\x1A", 1);
+					sendbyte('\x1A');
 				}
 				break;
 			case '\n':
@@ -577,9 +509,7 @@ void onexit(void) {
 		fclose(logfile);
 	}
 
-	if (sfd != -1) {
-		close(sfd);
-	}
+	closeserial();
 }
 
 int main(int argc, char *argv[]) {
