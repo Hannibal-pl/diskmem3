@@ -18,7 +18,6 @@ PERFORMANCE OF THIS SOFTWARE.
 #include <unistd.h>
 #include <fcntl.h>
 #include <termios.h>
-#include <stdlib.h>
 #include <poll.h>
 #include <errno.h>
 #include <sys/types.h>
@@ -362,7 +361,7 @@ void stdinprocess(void) {
 				} else {
 					inlflag = inopts.c_lflag;
 					printf("Please note that combinations like \"Ctrl-C\" are not available from now.\n");
-					inopts.c_lflag &= ~(ICANON | IEXTEN | ISIG);
+					inopts.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
 				}
 				tcsetattr(0, TCSAFLUSH, &inopts);
 				break;
@@ -452,23 +451,8 @@ void datapeekprocess(char *buf, int len) {
 		}
 	}
 
-	switch (transfer.type) {
-		case 'b':
-			temp &= 0xFF;
-			fwrite(&temp, 1, 1, transfer.file);
-			break;
-		case 'w':
-			temp &= 0xFFFF;
-			fwrite(&temp, 2, 1, transfer.file);
-			break;
-		case 'd':
-			fwrite(&temp, 4, 1, transfer.file);
-			break;
-		default:
-			printf("Unknown transfer type in impossible place.\n");
-			exit(EINVAL);
-			break;
-	}
+	temp &= 0xFFFFFFFF >> ((4 - transfer.step) << 3);
+	fwrite(&temp, transfer.step, 1, transfer.file);
 
 	transfer.curr += transfer.step;
 	if (transfer.curr < transfer.to) {
@@ -563,10 +547,12 @@ int main(int argc, char *argv[]) {
 					goto stdinp;
 				}
 
-				if (transfer.write) {
-					datapokeprocess(readbuf, count);
-				} else {
-					datapeekprocess(readbuf, count);
+				if (!isecho(readbuf)) {
+					if (transfer.write) {
+						datapokeprocess(readbuf, count);
+					} else {
+						datapeekprocess(readbuf, count);
+					}
 				}
 			}
 

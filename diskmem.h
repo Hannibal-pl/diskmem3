@@ -17,6 +17,7 @@ PERFORMANCE OF THIS SOFTWARE.
 #pragma once
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdbool.h>
 
 #define VERSION			"0.2.1"
@@ -40,6 +41,7 @@ extern int sfd;
 
 extern void closeserial(void);
 extern bool initserial(int baudrate);
+extern bool isecho(char *str);
 extern int openserial(void);
 extern void parseparams(int argc, char *argv[]);
 extern int selectbaud(int baudrate);

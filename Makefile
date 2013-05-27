@@ -1,6 +1,6 @@
 #CC=clang
 CC=gcc
-CFLAGS=-Wall -g -std=gnu99
+CFLAGS=-Wall -g -std=gnu99 -flto
 INCLUDES=-I/usr/include
 LIBS=-lm
 MOD=cmdline.o diskmem3.o serial.o

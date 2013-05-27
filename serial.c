@@ -249,6 +249,7 @@ void uflood(unsigned sec) {
 
 	printf("%is long \"U\" flood start.\n", sec);
 	while(time(NULL) < tm) {
+		usleep(1000);
 		poll(lpfd, 1, sec * 1000);
 		if (lpfd[0].revents == POLLIN) {
 			len = read(sfd, buf, sizeof(buf) - 1);
@@ -262,8 +263,16 @@ void uflood(unsigned sec) {
 			}
 		}
 		if (lpfd[0].revents == POLLOUT) {
-			sendcommand("UUUUUUUUUUUUUUUU");
+			sendcommand("U");
 		}
 	}
 	printf("\"U\" flood end - no effect.\n");
+}
+
+bool isecho(char *str) {
+	if (abs(strlen(str) - strlen(lastcommand)) > 1) {
+		return false;
+	}
+
+	return strncmp(lastcommand, str, MAX_COMMAND_LEN) ? false : true;
 }
