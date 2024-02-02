@@ -1,0 +1,7 @@
+BAZA: 0x400D2000
+
+3 counters 0x14 each
+
+0x00 - Start value
+0x04 - 15MHz Oscilator down counter
+0x08 - Flags ?

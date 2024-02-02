@@ -1,0 +1,3 @@
+SLIP
+start ESC
+2 bajtowa suma kontrolna za ESC złożona obliczana jaki suma wszystkich wartości wysłanych pomiędzy ESC a ESC.

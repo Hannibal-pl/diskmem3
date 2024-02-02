@@ -1,0 +1,7 @@
+BAZA: 0x400D6000
+
+0x28 - flagi
+ bit 0 - można czytać
+0x60 - dane (bufor)
+
+SPI ???

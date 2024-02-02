@@ -1,0 +1,105 @@
+AP <addr>    - Address Pointer
+BR <divisor> - Baud Rate
+BT           - BooT
+DS           - Data Store
+GO           - GO
+RD           - ReaD
+TE           - Toggle Echo
+WT <data>    - Write Text
+WW           - Write Word
+?            - Print Help
+RET          -
+
+
+
++----------------------+
+| AP - Address Pointer |
++----------------------+
+Zapamiętanie adresu ADDR.
+
+Komenda przyjmuje jako parametr w postaci 32-bitowej liczby heksadecymalnej.
+
+
+
++-----------------+
+| BR  - Baud Rate |
++-----------------+
+Ustawienie dzielnika częstotliwości zegara portu szeregego.
+
+Komenda przyjmuje parametr w postaci 16-bitowej liczby heksadecymalnej.
+
+Najprawdopodobniej 0xA2 to 38400.
+
+
+
++-----------+
+| BT - BooT |
++-----------+
+Odczyt pamięci flash i uruchomienie zawartego tam kodu, tak jak podczas
+standarowego uruchamiania się dysku.
+
+
+
++-----------------+
+| DS - Data Store |
++-----------------+
+Przesłanie danych do urządzenia.
+
+Po komendzie występują linie zakończone znakiem '\n' w formacie:
+XYYZZZZ[[ZZ[...]]AA[AA[...]]
+każdy znak oznacza cyfrę heksadecymalną ASCII czyli [0123456789ABCDEF]
+inne znaki są ignorowane z wyjatkiem 'S', które jest wyświetlane (znacznik postępu?)
+
+X        - ilość znaków offsetu pomniejszona o 4
+YY       - ilość danych w bajtach łącznie z offsetem
+ZZZZ...  - offset pod jaki mają być zapisane dane
+AAAA...  - dane
+
+Linia składająca się z "7\n" oznacza koniec transferu.
+
+Po transferze następuje programowy reset.
+
+
+
++---------+
+| GO - GO |
++---------+
+Wykonanie funkcji o adresie ADDR.
+
+
+
++----------------+
+| RD - ReaD byte |
++----------------+
+Odczytanie bajtu spod zapamiętanego adresu ADDR i zwiększenie ADDR o 1.
+
+
+
++------------------+
+| TE - Toggle Echo |
++------------------+
+Włączenie/wyłączenie trybu gadatliwego.
+
+
+
++------------+
+| WT - WriTe |
++------------+
+Zapisanie bajtu pod zapamiętany adresu ADDR i zwiększenie ADDR o 1.
+
+
+
++-----------------+
+| WW - Write Word |
++-----------------+
+Zapisanie słowa (4 bajty) pod zapamiętany adresu ADDR i zwiększenie ADDR o 4.
+
+
+
++----------+
+| ? - Help |
++----------+
+Wyswietlenie pomocy
+
+
+

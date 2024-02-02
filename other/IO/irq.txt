@@ -1,0 +1,4 @@
+BAZA: 0x400D0000
+
+0x00 - Signaled IRQ
+0x38 - Latest IRQ nr

@@ -1,0 +1,9 @@
+BAZA: 0x400D3000
+
+0x00 - bufor
+0x14 - flagi
+ bit 0 - można pisać
+ bit 1 - błąd przepełnienia
+ bit 3 - bład ramki
+ bit 5 - można czytać
+ bit 7 - 1s zegar ???

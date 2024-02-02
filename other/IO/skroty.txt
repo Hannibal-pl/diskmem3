@@ -1,0 +1,14 @@
+BGMS - BackGround Media Scan
+CFW  - Custom FirmWare
+DETS - Diagostic External Test Service
+DITS - Diagostic Internal Test Service
+DTCM - Data Tightly Coupled Memory
+DOS  - Directed Offline Scan
+DST  - Drive Self Test
+DTS  - Data Test Service
+FIS  - Frame Information Structure
+ITCM - Instruction Tightly Coupled Memory
+SFI  - Servo Feed Interface ?
+SFW  - System FirmWare
+TCM  - Tightly Coupled Memory
+VGA  - Variable Gain Amplifier
